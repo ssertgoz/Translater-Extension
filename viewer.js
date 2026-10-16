@@ -5,6 +5,7 @@ GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.mjs`;
 
 const status = document.getElementById("status");
 const documentViewer = document.getElementById("document-viewer");
+const toolbarToggle = document.getElementById("toolbar-toggle");
 const pageContainer = document.getElementById("page-container");
 const canvas = document.getElementById("page-canvas");
 const textLayerElement = document.getElementById("text-layer");
@@ -18,6 +19,7 @@ let renderId = 0;
 let lastSelection = "";
 let translationId = 0;
 let extensionEnabled = true;
+let manuallyHideToolbar = false;
 
 chrome.storage.sync.get({ extensionEnabled: true }).then(({ extensionEnabled: enabled }) => {
   extensionEnabled = enabled;
@@ -33,9 +35,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-documentViewer.addEventListener("scroll", () => {
-  document.body.classList.toggle("toolbar-hidden", documentViewer.scrollTop > 2);
-}, { passive: true });
+documentViewer.addEventListener("scroll", updateToolbarVisibility, { passive: true });
+toolbarToggle.addEventListener("click", () => {
+  const hidden = document.body.classList.contains("toolbar-hidden");
+  manuallyHideToolbar = !hidden;
+  if (hidden) documentViewer.scrollTop = 0;
+  updateToolbarVisibility();
+});
+updateToolbarVisibility();
 
 const documentUrl = new URLSearchParams(location.search).get("url");
 if (documentUrl) loadDocument({ url: documentUrl }, documentUrl.split("/").pop());
@@ -76,6 +83,15 @@ document.addEventListener("mousedown", (event) => {
   if (!bubble.contains(event.target)) hideBubble();
 });
 
+function updateToolbarVisibility() {
+  const hidden = manuallyHideToolbar || documentViewer.scrollTop > 2;
+  document.body.classList.toggle("toolbar-hidden", hidden);
+  toolbarToggle.textContent = hidden ? "⌄" : "⌃";
+  toolbarToggle.setAttribute("aria-expanded", String(!hidden));
+  toolbarToggle.setAttribute("aria-label", hidden ? "Show PDF toolbar" : "Hide PDF toolbar");
+  toolbarToggle.title = hidden ? "Show PDF toolbar" : "Hide PDF toolbar";
+}
+
 async function loadDocument(source, name = "PDF") {
   status.textContent = "Loading PDF…";
   try {
@@ -92,7 +108,8 @@ async function loadDocument(source, name = "PDF") {
     pageNumber = 1;
     scale = 1.25;
     documentViewer.scrollTop = 0;
-    document.body.classList.remove("toolbar-hidden");
+    manuallyHideToolbar = false;
+    updateToolbarVisibility();
     pageNumberInput.max = String(pdfDocument.numPages);
     document.getElementById("page-count").textContent = `of ${pdfDocument.numPages}`;
     pageContainer.hidden = false;
@@ -150,6 +167,8 @@ async function renderPage() {
 function goToPage(value) {
   if (!pdfDocument) return;
   pageNumber = Math.max(1, Math.min(pdfDocument.numPages, Number(value) || 1));
+  documentViewer.scrollTop = 0;
+  updateToolbarVisibility();
   renderPage();
 }
 
