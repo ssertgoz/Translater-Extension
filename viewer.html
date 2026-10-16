@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Translator</title>
+  <link rel="stylesheet" href="vendor/pdfjs/pdf_viewer.css">
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <header class="toolbar">
+    <div class="viewer-brand">
+      <img src="icons/icon32.png" alt="">
+      <div>
+        <strong>PDF Translator</strong>
+        <span>Read · select · translate</span>
+      </div>
+    </div>
+    <div class="toolbar-controls">
+      <label class="file-picker">Open PDF<input id="file-input" type="file" accept="application/pdf,.pdf"></label>
+      <div class="toolbar-group page-controls">
+        <button id="previous" type="button" aria-label="Previous page" title="Previous page">‹</button>
+        <input id="page-number" type="number" min="1" value="1" aria-label="Page number">
+        <span id="page-count">of 0</span>
+        <button id="next" type="button" aria-label="Next page" title="Next page">›</button>
+      </div>
+      <div class="toolbar-group zoom-controls">
+        <button id="zoom-out" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+        <button id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+      </div>
+    </div>
+    <span id="status" aria-live="polite">Open a PDF file to begin.</span>
+  </header>
+  <main id="document-viewer" aria-label="PDF document">
+    <div id="page-container" class="page-container" hidden>
+      <canvas id="page-canvas"></canvas>
+      <div id="text-layer" class="textLayer"></div>
+    </div>
+  </main>
+  <div id="translation-bubble" role="status" hidden></div>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>
