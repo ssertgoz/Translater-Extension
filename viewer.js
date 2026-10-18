@@ -5,7 +5,6 @@ GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.mjs`;
 
 const status = document.getElementById("status");
 const documentViewer = document.getElementById("document-viewer");
-const toolbarToggle = document.getElementById("toolbar-toggle");
 const pageContainer = document.getElementById("page-container");
 const canvas = document.getElementById("page-canvas");
 const textLayerElement = document.getElementById("text-layer");
@@ -40,12 +39,6 @@ documentViewer.addEventListener("scroll", () => {
   if (toolbarVisibilityOverride === false) toolbarVisibilityOverride = null;
   updateToolbarVisibility();
 }, { passive: true });
-toolbarToggle.addEventListener("click", () => {
-  const hidden = document.body.classList.contains("toolbar-hidden");
-  toolbarVisibilityOverride = !hidden;
-  if (hidden) documentViewer.scrollTop = 0;
-  updateToolbarVisibility();
-});
 updateToolbarVisibility();
 
 const documentUrl = new URLSearchParams(location.search).get("url");
@@ -97,10 +90,6 @@ document.addEventListener("mousedown", (event) => {
 function updateToolbarVisibility() {
   const hidden = toolbarVisibilityOverride ?? (documentViewer.scrollTop > 2);
   document.body.classList.toggle("toolbar-hidden", hidden);
-  toolbarToggle.textContent = hidden ? "⌄" : "⌃";
-  toolbarToggle.setAttribute("aria-expanded", String(!hidden));
-  toolbarToggle.setAttribute("aria-label", hidden ? "Show PDF toolbar" : "Hide PDF toolbar");
-  toolbarToggle.title = hidden ? "Show PDF toolbar" : "Hide PDF toolbar";
 }
 
 async function loadDocument(source, name = "PDF") {
