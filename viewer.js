@@ -10,6 +10,7 @@ const pageContainer = document.getElementById("page-container");
 const canvas = document.getElementById("page-canvas");
 const textLayerElement = document.getElementById("text-layer");
 const pageNumberInput = document.getElementById("page-number");
+const pageIndicator = document.getElementById("page-indicator");
 const bubble = document.getElementById("translation-bubble");
 let pdfDocument;
 let pageNumber = 1;
@@ -19,7 +20,7 @@ let renderId = 0;
 let lastSelection = "";
 let translationId = 0;
 let extensionEnabled = true;
-let manuallyHideToolbar = false;
+let toolbarVisibilityOverride = null;
 
 chrome.storage.sync.get({ extensionEnabled: true }).then(({ extensionEnabled: enabled }) => {
   extensionEnabled = enabled;
@@ -35,10 +36,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-documentViewer.addEventListener("scroll", updateToolbarVisibility, { passive: true });
+documentViewer.addEventListener("scroll", () => {
+  if (toolbarVisibilityOverride === false) toolbarVisibilityOverride = null;
+  updateToolbarVisibility();
+}, { passive: true });
 toolbarToggle.addEventListener("click", () => {
   const hidden = document.body.classList.contains("toolbar-hidden");
-  manuallyHideToolbar = !hidden;
+  toolbarVisibilityOverride = !hidden;
   if (hidden) documentViewer.scrollTop = 0;
   updateToolbarVisibility();
 });
@@ -62,6 +66,13 @@ document.getElementById("previous").addEventListener("click", () => goToPage(pag
 document.getElementById("next").addEventListener("click", () => goToPage(pageNumber + 1));
 document.addEventListener("keydown", (event) => {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (event.key === "Escape") {
+    const hidden = document.body.classList.contains("toolbar-hidden");
+    toolbarVisibilityOverride = !hidden;
+    event.preventDefault();
+    updateToolbarVisibility();
+    return;
+  }
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
   if (event.target instanceof Element && event.target.closest("input, button, select, textarea")) return;
   if (!window.getSelection()?.isCollapsed) return;
@@ -84,7 +95,7 @@ document.addEventListener("mousedown", (event) => {
 });
 
 function updateToolbarVisibility() {
-  const hidden = manuallyHideToolbar || documentViewer.scrollTop > 2;
+  const hidden = toolbarVisibilityOverride ?? (documentViewer.scrollTop > 2);
   document.body.classList.toggle("toolbar-hidden", hidden);
   toolbarToggle.textContent = hidden ? "⌄" : "⌃";
   toolbarToggle.setAttribute("aria-expanded", String(!hidden));
@@ -108,7 +119,7 @@ async function loadDocument(source, name = "PDF") {
     pageNumber = 1;
     scale = 1.25;
     documentViewer.scrollTop = 0;
-    manuallyHideToolbar = false;
+    toolbarVisibilityOverride = null;
     updateToolbarVisibility();
     pageNumberInput.max = String(pdfDocument.numPages);
     document.getElementById("page-count").textContent = `of ${pdfDocument.numPages}`;
@@ -141,6 +152,8 @@ async function renderPage() {
     textLayerElement.style.height = `${Math.floor(viewport.height)}px`;
     textLayerElement.style.setProperty("--scale-factor", scale);
 
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
     const currentTask = page.render({
       canvasContext: context,
       transform: outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null,
@@ -158,6 +171,8 @@ async function renderPage() {
     });
     await textLayer.render();
     pageNumberInput.value = String(pageNumber);
+    pageIndicator.textContent = `${pageNumber} / ${pdfDocument.numPages}`;
+    pageIndicator.hidden = false;
     status.textContent = `Page ${pageNumber} of ${pdfDocument.numPages} · Select text to translate · ←/→ pages`;
   } catch (error) {
     if (error?.name !== "RenderingCancelledException") showError(error);
